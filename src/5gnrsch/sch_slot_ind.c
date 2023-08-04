@@ -31,6 +31,7 @@ File:     sch_slot_ind.c
 /** @file sch_slot_ind.c
   @brief This module processes slot indications
  */
+#include <time.h>
 #include "common_def.h"
 #include "tfu.h"
 #include "lrg.h"
@@ -41,6 +42,7 @@ File:     sch_slot_ind.c
 #include "mac_sch_interface.h"
 #include "sch.h"
 #include "sch_utils.h"
+#include "sch_slice_based.h"
 #ifdef NR_DRX 
 #include "sch_drx.h"
 #endif
@@ -651,12 +653,17 @@ uint8_t SchProcSlotInd(Pst *pst, SlotTimingInfo *slotInd)
    SchCellCb      *cell = NULLP;
    Inst           schInst = pst->dstInst-SCH_INST_START;
 
+   // struct timespec start, end;
+   // double processTime;
+   // clock_gettime(1, &start);
+
    cell = schCb[schInst].cells[schInst];
    if(cell == NULLP)
    {
       DU_LOG("\nERROR  -->  SCH : Cell Does not exist");
       return RFAILED;
    }
+
    memset(&dlSchedInfo, 0, sizeof(DlSchedInfo));
    schCalcSlotValues(*slotInd, &dlSchedInfo.schSlotValue, cell->numSlots);
    dlBrdcstAlloc = &dlSchedInfo.brdcstAlloc;
@@ -754,6 +761,11 @@ uint8_t SchProcSlotInd(Pst *pst, SlotTimingInfo *slotInd)
 #ifdef NR_DRX 
    schHandleExpiryDrxTimer(cell);
 #endif   
+
+   // clock_gettime(1, &end);
+   // processTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / BILLION_NUM;
+   // DU_LOG("\nDennis  -->  Measurement : Processing Time of whole scheduling: %f sec", processTime);
+
    return ret;
 }
 

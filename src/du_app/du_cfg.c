@@ -18,14 +18,12 @@
 
 /* This file contains all utility functions */
 #include "common_def.h"
-#include "du_tmr.h"
 #include "legtp.h"
 #include "lrg.h"
 #include "lkw.x"
 #include "lrg.x"
 #include "du_app_mac_inf.h"
 #include "du_app_rlc_inf.h"
-#include "du_e2ap_mgr.h"
 #include "du_cfg.h"
 #include "du_mgr.h"
 #include "du_utils.h"
@@ -45,7 +43,6 @@
 #include "PagingCycle.h"
 #include "PCCH-Config.h"
 #include "TimeAlignmentTimer.h"
-#include "BCCH-DL-SCH-Message.h"
 #include "RACH-ConfigGeneric.h"
 #include "PUSCH-TimeDomainResourceAllocation.h"
 #include "PUCCH-ConfigCommon.h"
@@ -130,7 +127,7 @@ uint8_t readMacCfg()
    duCfgParam.macCellCfg.cellCfg.cellState  = cellParams.cellState;
    duCfgParam.macCellCfg.cellCfg.phyCellId  = cellParams.nRPCI;
    duCfgParam.macCellCfg.cellCfg.tac        = cellParams.nRTAC;
-   duCfgParam.macCellCfg.cellCfg.ssbFreq    = cellParams.ssbFrequency;
+   duCfgParam.macCellCfg.cellCfg.ssbFreq    = convertArfcnToFreqKhz(cellParams.ssbFrequency);
 #else
    duCfgParam.macCellCfg.cellCfg.opState    = OP_DISABLED; 
    duCfgParam.macCellCfg.cellCfg.adminState = ADMIN_UNLOCKED;
@@ -179,7 +176,7 @@ uint8_t readMacCfg()
    duCfgParam.macCellCfg.ssbCfg.betaPss = BETA_PSS;
 #ifdef O1_ENABLE
    duCfgParam.macCellCfg.ssbCfg.scsCmn = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing);
-   duCfgParam.macCellCfg.ssbCfg.ssbPeriod = convertSSBPeriodicityToEnum(cellParams.ssbPeriodicity);
+   duCfgParam.macCellCfg.ssbCfg.ssbPeriod = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity);
    duCfgParam.macCellCfg.ssbCfg.ssbScOffset = cellParams.ssbOffset;
 #else
    duCfgParam.macCellCfg.ssbCfg.scsCmn = NR_SCS;
@@ -324,21 +321,60 @@ uint8_t readMacCfg()
 #ifndef O1_ENABLE
 
    /*Note: Static Configuration, when O1 is not configuring the RRM policy*/
-   RrmPolicyList rrmPolicy;
-   rrmPolicy.id[0] = 1;
-   rrmPolicy.resourceType = PRB;
-   rrmPolicy.rRMMemberNum = 1;
-   memcpy(rrmPolicy.rRMPolicyMemberList[0].mcc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mcc, 3*sizeof(uint8_t));
-   memcpy(rrmPolicy.rRMPolicyMemberList[0].mnc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mnc, 3*sizeof(uint8_t));
-   rrmPolicy.rRMPolicyMemberList[0].sst = 1;
-   rrmPolicy.rRMPolicyMemberList[0].sd[0] = 2;
-   rrmPolicy.rRMPolicyMemberList[0].sd[1] = 3;
-   rrmPolicy.rRMPolicyMemberList[0].sd[2] = 4;
-   rrmPolicy.rRMPolicyMaxRatio = 90;
-   rrmPolicy.rRMPolicyMinRatio = 30;
-   rrmPolicy.rRMPolicyDedicatedRatio = 10;
+   RrmPolicyList rrmPolicy[NUM_OF_SUPPORTED_SLICE];
+   rrmPolicy[0].id[0] = 1;
+   rrmPolicy[0].resourceType = PRB;
+   rrmPolicy[0].rRMMemberNum = 1;
+   memcpy(rrmPolicy[0].rRMPolicyMemberList[0].mcc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mcc, 3*sizeof(uint8_t));
+   memcpy(rrmPolicy[0].rRMPolicyMemberList[0].mnc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mnc, 3*sizeof(uint8_t));
+   rrmPolicy[0].rRMPolicyMemberList[0].sst = 1;
+   rrmPolicy[0].rRMPolicyMemberList[0].sd[0] = 2;
+   rrmPolicy[0].rRMPolicyMemberList[0].sd[1] = 3;
+   rrmPolicy[0].rRMPolicyMemberList[0].sd[2] = 4;
+   rrmPolicy[0].rRMPolicyMaxRatio = 100;
+   rrmPolicy[0].rRMPolicyMinRatio = 50;
+   rrmPolicy[0].rRMPolicyDedicatedRatio = 10;
 
-   cpyRrmPolicyInDuCfgParams(&rrmPolicy, 1, &duCfgParam.tempSliceCfg);
+   rrmPolicy[1].id[0] = 2;
+   rrmPolicy[1].resourceType = PRB;
+   rrmPolicy[1].rRMMemberNum = 1;
+   memcpy(rrmPolicy[1].rRMPolicyMemberList[0].mcc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mcc, 3*sizeof(uint8_t));
+   memcpy(rrmPolicy[1].rRMPolicyMemberList[0].mnc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mnc, 3*sizeof(uint8_t));
+   rrmPolicy[1].rRMPolicyMemberList[0].sst = 2;
+   rrmPolicy[1].rRMPolicyMemberList[0].sd[0] = 3;
+   rrmPolicy[1].rRMPolicyMemberList[0].sd[1] = 3;
+   rrmPolicy[1].rRMPolicyMemberList[0].sd[2] = 4;
+   rrmPolicy[1].rRMPolicyMaxRatio = 100;
+   rrmPolicy[1].rRMPolicyMinRatio = 50;
+   rrmPolicy[1].rRMPolicyDedicatedRatio = 10;
+
+   // rrmPolicy[2].id[0] = 3;
+   // rrmPolicy[2].resourceType = PRB;
+   // rrmPolicy[2].rRMMemberNum = 1;
+   // memcpy(rrmPolicy[2].rRMPolicyMemberList[0].mcc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mcc, 3*sizeof(uint8_t));
+   // memcpy(rrmPolicy[2].rRMPolicyMemberList[0].mnc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mnc, 3*sizeof(uint8_t));
+   // rrmPolicy[2].rRMPolicyMemberList[0].sst = 3;
+   // rrmPolicy[2].rRMPolicyMemberList[0].sd[0] = 4;
+   // rrmPolicy[2].rRMPolicyMemberList[0].sd[1] = 3;
+   // rrmPolicy[2].rRMPolicyMemberList[0].sd[2] = 4;
+   // rrmPolicy[2].rRMPolicyMaxRatio = 100;
+   // rrmPolicy[2].rRMPolicyMinRatio = 33;
+   // rrmPolicy[2].rRMPolicyDedicatedRatio = 10;
+
+   // rrmPolicy[3].id[0] = 4;
+   // rrmPolicy[3].resourceType = PRB;
+   // rrmPolicy[3].rRMMemberNum = 1;
+   // memcpy(rrmPolicy[3].rRMPolicyMemberList[0].mcc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mcc, 3*sizeof(uint8_t));
+   // memcpy(rrmPolicy[3].rRMPolicyMemberList[0].mnc,duCfgParam.macCellCfg.cellCfg.plmnInfoList[0].plmn.mnc, 3*sizeof(uint8_t));
+   // rrmPolicy[3].rRMPolicyMemberList[0].sst = 3;
+   // rrmPolicy[3].rRMPolicyMemberList[0].sd[0] = 4;
+   // rrmPolicy[3].rRMPolicyMemberList[0].sd[1] = 3;
+   // rrmPolicy[3].rRMPolicyMemberList[0].sd[2] = 4;
+   // rrmPolicy[3].rRMPolicyMaxRatio = 100;
+   // rrmPolicy[3].rRMPolicyMinRatio = 25;
+   // rrmPolicy[3].rRMPolicyDedicatedRatio = 10;
+
+   cpyRrmPolicyInDuCfgParams(rrmPolicy, NUM_OF_SUPPORTED_SLICE, &duCfgParam.tempSliceCfg);
 
 #endif
 
@@ -602,12 +638,9 @@ uint8_t readCfg()
    Sib1Params sib1;
    F1TaiSliceSuppLst *taiSliceSuppLst;
 
-   duCb.e2apDb.e2TransInfo.transIdCounter = 0;
-   memset(duCb.e2apDb.e2TransInfo.onGoingTransaction, 0, MAX_NUM_TRANSACTION * sizeof(E2TransInfo));
-
 #ifndef O1_ENABLE
    /* Note: Added these below variable for local testing*/
-   Snssai snssai[NUM_OF_SUPPORTED_SLICE] = {{1,{2,3,4}},{5,{6,7,8}}};
+   Snssai snssai[NUM_OF_SUPPORTED_SLICE] = {{1,{2,3,4}},{2,{3,3,4}},{3,{4,3,4}},{4,{5,3,4}}};
 #endif
 
 #ifdef O1_ENABLE
@@ -652,15 +685,8 @@ uint8_t readCfg()
    duCfgParam.egtpParams.maxTunnelId = MAX_TEID;
 
    duCfgParam.maxUe = 32; //TODO: Check
-
-   /* DU Info */
-   duCfgParam.duId = DU_ID;
-   DU_ALLOC(duCfgParam.duName, sizeof(DU_NAME));
-   if(!duCfgParam.duName)
-   {
-      DU_LOG("\nDEBUG --> DU_APP: readCfg(): Memory allocation failure for DU name");   
-      return RFAILED;
-   }
+   /* DU Info */	
+   duCfgParam.duId = DU_ID;	
    strcpy((char*)duCfgParam.duName,DU_NAME);
 
    /* Mib Params */
@@ -675,7 +701,8 @@ uint8_t readCfg()
    mib.controlResourceSetZero = CORESET_0_INDEX;
    mib.searchSpaceZero = SEARCHSPACE_0_INDEX;
    mib.cellBarred = MIB__cellBarred_notBarred;
-   mib.intraFreqReselection = MIB__intraFreqReselection_notAllowed;
+   mib.intraFreqReselection =
+      MIB__intraFreqReselection_notAllowed;
    duCfgParam.mibParams = mib;
 
    /* SIB1 Params */
@@ -690,7 +717,7 @@ uint8_t readCfg()
 #ifdef O1_ENABLE
    sib1.tac =  cellParams.nRTAC;
    sib1.cellIdentity =  CELL_IDENTITY *  cellParams.cellLocalId;
-   DU_LOG("\nDEBUG --> DU_APP: readCfg(): OAM CellLocalId=%d", \
+      DU_LOG("\n*********DEBUG --> DU_APP: readCfg(): OAM CellLocalId=%d", \
               sib1.cellIdentity);
 #else
    sib1.tac = DU_TAC;
@@ -698,8 +725,7 @@ uint8_t readCfg()
 #endif
    sib1.cellResvdForOpUse = PLMN_IdentityInfo__cellReservedForOperatorUse_notReserved;
    sib1.connEstFailCnt = ConnEstFailureControl__connEstFailCount_n3;
-   sib1.connEstFailOffValidity = ConnEstFailureControl__connEstFailOffsetValidity_s900;
-   sib1.connEstFailOffset = 15;
+   sib1.connEstFailOffValidity = ConnEstFailureControl__connEstFailOffsetValidity_s120;
    sib1.siSchedInfo.winLen = SI_SchedulingInfo__si_WindowLength_s5;
    sib1.siSchedInfo.broadcastSta = SchedulingInfo__si_BroadcastStatus_broadcasting;
    sib1.siSchedInfo.preiodicity = SchedulingInfo__si_Periodicity_rf8;
@@ -808,13 +834,13 @@ uint8_t readCfg()
 #ifdef O1_ENABLE      
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.nrArfcn = cellParams.arfcnUL;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulArfcn = cellParams.arfcnSUL;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing); 		
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity); 		
 #else
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.nrArfcn = NR_UL_ARFCN;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulArfcn = SUL_ARFCN;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrScs = NR_SCS; 		
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrScs = SSB_PRDCTY_MS_20; 		
 #endif      
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrb = NRB_273;	       
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.tdd.nrFreqInfo.sulInfo.sulTxBw.nrb = NRB_106;	       
 
       for(freqBandIdx=0; freqBandIdx<MAX_NRCELL_BANDS; freqBandIdx++)
       {
@@ -831,21 +857,21 @@ uint8_t readCfg()
 #ifdef O1_ENABLE
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.nrArfcn = cellParams.arfcnUL;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulArfcn = cellParams.arfcnSUL;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulTxBw.nrScs = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing);
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing);
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulTxBw.nrScs = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity);
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity);
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.nrArfcn = cellParams.arfcnDL;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulArfcn = cellParams.arfcnSUL;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing);
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlTxBw.nrScs = convertScsValToScsEnum(cellParams.ssbSubCarrierSpacing);
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulTxBw.nrScs = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity);
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlTxBw.nrScs = convertScsPeriodicityToEnum(cellParams.ssbPeriodicity);
 #else
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.nrArfcn = NR_UL_ARFCN;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulArfcn = SUL_ARFCN;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulTxBw.nrScs = NR_SCS;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulTxBw.nrScs = NR_SCS;
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulTxBw.nrScs = SSB_PRDCTY_MS_20;
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulTxBw.nrScs = SSB_PRDCTY_MS_20;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.nrArfcn = NR_DL_ARFCN;
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulArfcn = SUL_ARFCN;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulTxBw.nrScs = NR_SCS;
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlTxBw.nrScs = NR_SCS;
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlNrFreqInfo.sulInfo.sulTxBw.nrScs = SSB_PRDCTY_MS_20;
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.dlTxBw.nrScs = SSB_PRDCTY_MS_20;
 #endif
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.f1Mode.mode.fdd.ulNrFreqInfo.sulInfo.sulTxBw.nrb = NRB_106;
       for(freqBandIdx=0; freqBandIdx<MAX_NRCELL_BANDS; freqBandIdx++)
@@ -875,7 +901,7 @@ uint8_t readCfg()
 #endif
 
       /*Measurement Config and Cell Config */ 
-      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.measTimeCfgDuration = TIME_CFG; 
+      duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.measTimeCfg = TIME_CFG; 
 
       duCfgParam.srvdCellLst[srvdCellIdx].duCellInfo.cellDir = DL_UL; 
 
@@ -1088,26 +1114,7 @@ uint8_t duReadCfg()
    pst.selector = ODU_SELECTOR_TC;
    pst.pool= DU_POOL;
 
-   /* Initialize the timer blocks */
-   cmInitTimers(&(duCb.e2apDb.e2Timers.e2SetupTimer), 1);
 
-   /* Initialzie the timer queue */   
-   memset(&(duCb.duTimersInfo.tmrTq), 0, sizeof(CmTqType) * DU_TQ_SIZE);
-   
-   /* Initialize the timer control point */
-   memset(&(duCb.duTimersInfo.tmrTqCp), 0, sizeof(CmTqCp));
-   duCb.duTimersInfo.tmrTqCp.tmrLen = DU_TQ_SIZE;
-   
-   /* Initialize the timer resolution */
-   duCb.duTimersInfo.tmrRes = DU_TIMER_RESOLUTION;
-   
-   /* Timer Registration request to system services */
-   if (ODU_REG_TMR_MT(pst.srcEnt, pst.srcInst, duCb.duTimersInfo.tmrRes, duActvTmr) != ROK)
-   {
-      DU_LOG("\nERROR  -->  DU_APP : Failed to register timer");
-      return RFAILED;
-   }   
-              
    if(ODU_GET_MSG_BUF(DFLT_REGION, DU_POOL, &mBuf) != ROK)
    {
       DU_LOG("\nERROR  -->  DU_APP : Memory allocation failed in duReadCfg");

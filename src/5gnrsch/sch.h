@@ -367,6 +367,7 @@ typedef struct schLcCtxt
 {
    uint8_t lcId;     // logical Channel ID
    uint8_t lcp;      // logical Channel Prioritization
+   uint16_t   fiveQi; // 5QI
    SchLcState lcState;
    uint32_t bo;
    uint16_t   pduSessionId; /*Pdu Session Id*/
@@ -565,6 +566,8 @@ typedef struct schAllApis
    void (* SchDlRlcBoInfo)(SchCellCb *cellCb, uint16_t ueId);
    void (* SchSrUciInd)(SchCellCb *cellCb, uint16_t ueId);
    void (* SchBsr)(SchCellCb *cellCb, uint16_t ueId);
+   void (* SchSliceCfgReq)(SchCellCb *cellCb);
+   void (* SchSliceRecfgReq)(SchCellCb *cellCb);
    void (* SchHandleLcList)(void *ptr, CmLList *node, ActionTypeLL action);
    void (* SchAddToDlHqRetxList)(SchDlHqProcCb *hqP);
    void (* SchAddToUlHqRetxList)(SchUlHqProcCb *hqP);
@@ -716,7 +719,7 @@ uint8_t schDlRsrcAllocMsg4(SchCellCb *cell, SlotTimingInfo msg4Time, uint8_t ueI
 uint8_t pdschStartSymbol, uint8_t pdschNumSymbols, bool isRetx, SchDlHqProcCb *hqP);
 uint8_t allocatePrbDl(SchCellCb *cell, SlotTimingInfo slotTime, uint8_t startSymbol, uint8_t symbolLength, \
    uint16_t *startPrb, uint16_t numPrb);
-void fillDlMsgInfo(DlMsgSchInfo *dlMsgInfo, uint16_t crnti, bool isRetx, SchDlHqProcCb* hqP); /*AS per 38.473 V15.3.0, Section 9.3.1.32 crnti value range is b/w 0..65535*/
+void fillDlMsgInfo(DlMsgSchInfo *dlMsgInfo, uint8_t crnti, bool isRetx, SchDlHqProcCb* hqP);
 bool findValidK0K1Value(SchCellCb *cell, SlotTimingInfo currTime, uint8_t ueId, bool dedMsg, uint8_t *pdschStartSymbol,\
 uint8_t *pdschSymblLen, SlotTimingInfo *pdcchTime,  SlotTimingInfo *pdschTime, SlotTimingInfo *pucchTime, bool isRetx, SchDlHqProcCb *hqP);
 RaRspWindowStatus isInRaRspWindow(SchRaReq *raReq, SlotTimingInfo frameToCheck, uint16_t numSlotsPerSystemFrame);
